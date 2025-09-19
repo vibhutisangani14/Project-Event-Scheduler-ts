@@ -3,12 +3,18 @@ import { useParams, Link } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
+import { EventItem } from "../types/event";
+
 
 const EventDetail = () => {
-  const { id } = useParams();
-  const [event, setEvent] = useState();
+  //params;
+  const { id } = useParams<{ id: string }>();
+  // state with explicit type
+  const [event, setEvent] = useState<EventItem | null>(null);
 
   useEffect(() => {
+    if (!id) return;
+
     fetch(`http://localhost:3001/api/events/${id}`)
 
       .then((res) => {
@@ -16,7 +22,7 @@ const EventDetail = () => {
         return res.json();
       })
 
-      .then((data) => {
+      .then((data: EventItem) => {
         setEvent(data);
       })
 
@@ -26,8 +32,8 @@ const EventDetail = () => {
   if (!event) return <p>Loading events...</p>;
 
   const eventDate = new Date(event.date);
-  const defaultPosition = [53.5511, 9.9937]; // Hamburg
-  const position =
+  const defaultPosition: [number, number] = [53.5511, 9.9937]; // Hamburg
+  const position: [number, number] =
     event.latitude && event.longitude
       ? [event.latitude, event.longitude]
       : defaultPosition;
@@ -74,7 +80,8 @@ const EventDetail = () => {
 
           <div className="flex items-baseline-last space-x-2 mt-6">
             <h1 className="text-3xl font-mono font-bold text-blue-300 whitespace-nowrap mr-14"> 📅 Time:</h1>
-            <p className="text-xl font-mono text-gray-100"> {new Date(event.date).toLocaleString()}
+            <p className="text-xl font-mono text-gray-100">
+              {eventDate.toLocaleString()}
             </p>
           </div> {/*this is time: eventtime*/}
 
@@ -109,9 +116,12 @@ const EventDetail = () => {
             style={{ height: "700px", width: "100%" }}
           >
             <TileLayer
-              attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
+              {...({} as any)}
             />
+
+
             <Marker position={position}>
               <Popup>{event.title}</Popup>
             </Marker>

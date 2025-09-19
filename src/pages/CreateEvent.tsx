@@ -1,43 +1,60 @@
-import React from "react";
-import { useActionState, useState } from "react";
-import { createEvent } from "../data/events";
-import { useEvents } from "../context";
-import { sleep, validateCreateEventForm } from "../utils";
-import { toast } from "react-toastify";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { toast } from "react-toastify";
+
+import { createEvent } from "../data/events";
+import { useEvents } from "../context";
+import { sleep, validateCreateEventForm } from "../utils";
+import { NewEventInput } from "../types/event";
 
 const CreateEvent = () => {
   const { setEvents } = useEvents();
   const navigate = useNavigate();
 
-  const submitAction = async (prevState, formData) => {
-    const title = formData.get("title");
-    const description = formData.get("description");
-    const date = formData.get("date");
-    const location = formData.get("location");
-    const latitude = formData.get("latitude");
-    const longitude = formData.get("longitude");
+  // form state
+  const [form, setForm] = useState<NewEventInput>({
+    title: "",
+    description: "",
+    date: "",
+    location: "",
+    latitude: "8.404746955649602",
+    longitude: "49.01438194665317",
+  });
 
-    const newEventData = {
-      title,
-      description,
-      date,
-      location,
-      latitude,
-      longitude,
-    };
-    const validationErrors = validateCreateEventForm(newEventData);
-    console.log(validationErrors);
+  // new: validation errors
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  // new: loading spinner state
+  const [isPending, setIsPending] = useState(false);
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
 
-    if (Object.keys(validationErrors).length !== 0)
-      return { error: validationErrors, success: false };
+  const handleDateChange = (date: Date | null) => {
+    setForm((prev) => ({
+      ...prev,
+      date: date ? date.toISOString() : "",
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const validationErrors = validateCreateEventForm(form);
+    if (Object.keys(validationErrors).length !== 0) {
+      toast.error("Validation failed");
+      return;
+    }
+
+    setIsPending(true);
+
     try {
       await sleep(1000);
+      const newEvent = await createEvent(form);
 
-      console.log(newEventData);
-      const newEvent = await createEvent(newEventData);
+      // reset form
       setForm({
         title: "",
         description: "",
@@ -46,80 +63,70 @@ const CreateEvent = () => {
         latitude: "8.404746955649602",
         longitude: "49.01438194665317",
       });
+
+      setFormErrors({});
+
       toast.success("There's a new event in your pond!");
       navigate("/events", { replace: true });
-      return { error: null, success: true };
     } catch (error) {
-      toast.error(error.message || "Something went wrong");
-      return { error: null, success: false };
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Something went wrong");
+      }
     }
   };
-  const [{ title, description, date, location }, setForm] = useState({
-    title: "",
-    description: "",
-    date: "",
-    location: "",
-    latitude: "8.404746955649602",
-    longitude: "49.01438194665317",
-  });
-  const [state, formAction, isPending] = useActionState(submitAction, {
-    error: null,
-    success: false,
-  });
-  const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
 
-  const handleDateChange = (date) => {
-    setForm((prev) => ({
-      ...prev,
-      date: date ? date.toISOString() : "",
-    }));
-  };
 
   return (
     <form
-      action={formAction}
+    onSubmit={handleSubmit}
       className="my-5 md:w-1/2 mx-auto flex flex-col gap-3 items-center"
     >
       <div className="flex flex-col h-full w-full items-center mt-[60px] gap-[1rem]">
         <div className="text-black font-semibold text-2xl mb-2">
           Create New Event
         </div>
+
+        {/* Title */}
         <div className="flex flex-col items-left justify-center">
           <input
             className="input border-black text-black w-[25rem]"
             type="text"
             name="title"
-            value={title}
+            value={form.title}
             onChange={handleChange}
             placeholder="Title"
           />
-          {state.error?.title && (
-            <p className="text-red-500 text-sm mt-1">{state.error?.title}</p>
+          {formErrors.title && (
+            <p className="text-red-500 text-sm mt-1">{formErrors.title}</p>
           )}
         </div>
 
+        {/* Description */}
         <div className="flex flex-col items-left justify-center">
           <input
             className="input border-black text-black w-[25rem]"
             type="text"
             name="description"
-            value={description}
+            value={form.description}
             onChange={handleChange}
             placeholder="Description"
           />
-          {state.error?.description && (
+
+          {formErrors.description && (
             <p className="text-red-500 text-sm mt-1">
-              {state.error?.description}
+              {formErrors.description}
             </p>
           )}
         </div>
+
+      {/* Date */}
         <div className="flex flex-col items-left justify-center">
           <div className="relative w-[25rem]">
             <DatePicker
               className="input border-black text-black w-[25rem] pr-10"
-              selected={date ? new Date(date) : null}
+              selected={form.date ? new Date(form.date) : null}
               onChange={handleDateChange}
               name="date"
               showTimeSelect
@@ -142,23 +149,25 @@ const CreateEvent = () => {
               />
             </svg>
           </div>
-          {state.error?.date && (
-            <p className="text-red-500 text-sm mt-1">{state.error?.date}</p>
+          {formErrors.date && (
+            <p className="text-red-500 text-sm mt-1">{formErrors.date}</p>
           )}
         </div>
+
         <div className="flex flex-col items-left justify-center">
           <input
             className="input border-black text-black w-[25rem]"
             type="text"
             name="location"
-            value={location}
+             value={form.location}
             onChange={handleChange}
             placeholder="Location"
           />
-          {state.error?.location && (
-            <p className="text-red-500 text-sm mt-1">{state.error?.location}</p>
+          {formErrors.location && (
+            <p className="text-red-500 text-sm mt-1">{formErrors.location}</p>
           )}
         </div>
+        
         <button type="submit" className="btn btn-neutral" disabled={isPending}>
           {isPending ? (
             <>

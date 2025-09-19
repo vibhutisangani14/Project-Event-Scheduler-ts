@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context";
 import { toast } from "react-toastify";
+import { EventItem } from "../../types/event";
 
 const MyEvent = () => {
   const { signedIn } = useAuth();
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
   const [showAll, setShowAll] = useState(true);
   const [loading, setLoading] = useState(true);
 
@@ -23,13 +24,15 @@ const MyEvent = () => {
       setEvents(Array.isArray(data) ? data : data.results ?? []);
     } catch (err) {
       console.error("Error fetching events:", err);
-      toast.error(err.message || "Failed to load events");
+      if (err instanceof Error) {
+        toast.error(err.message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const getCategory = (event) => {
+  const getCategory = (event: EventItem): string => {
     const t = (event.title || "").toLowerCase();
     if (t.includes("ux") || t.includes("design") || t.includes("figma"))
       return "design";
@@ -38,7 +41,7 @@ const MyEvent = () => {
     return "general";
   };
 
-  const getCategoryStyle = (category) => {
+  const getCategoryStyle = (category:string): string => {
     switch (category) {
       case "design":
         return "bg-pink-100 border-pink-200";
@@ -49,7 +52,7 @@ const MyEvent = () => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: string | undefined) => {
     if (!signedIn) return;
     if (!confirm("Delete this event?")) return;
 
@@ -71,7 +74,11 @@ const MyEvent = () => {
 
       toast.success("Deleted");
     } catch (e) {
-      toast.error(e.message || "Delete failed");
+     if (e instanceof Error) {
+      toast.error(e.message);
+     } else {
+      toast.error("Delete failed");
+     }
     }
   };
 

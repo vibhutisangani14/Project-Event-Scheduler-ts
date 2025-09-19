@@ -1,7 +1,9 @@
-import { createContext, use } from "react";
+import { createContext, useContext } from "react";
 import AuthProvider from "./AuthProvider";
 import EventProvider from "./EventProvider";
 const EventContext = createContext();
+
+
 
 const useEvents = () => {
   const context = use(EventContext);
